@@ -1,0 +1,3 @@
+pnpm install --lockfile-only --frozen-lockfile
+pnpm format:check
+pnpm lint:check

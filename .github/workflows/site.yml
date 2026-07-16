@@ -1,0 +1,71 @@
+name: Site
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up toolchains
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint source
+        run: pnpm lint:check
+
+      - name: Build static site
+        run: pnpm build
+
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Publish site to S3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          aws s3 sync web/out "s3://${{ vars.AWS_S3_BUCKET }}" \
+            --delete \
+            --cache-control "no-cache"
+          aws s3 cp web/out/_next/static "s3://${{ vars.AWS_S3_BUCKET }}/_next/static" \
+            --recursive \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Invalidate CloudFront cache
+        if: >-
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/main' &&
+          vars.AWS_CLOUDFRONT_DISTRIBUTION_ID != ''
+        run: >-
+          aws cloudfront create-invalidation
+          --distribution-id "${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}"
+          --paths "/*"
