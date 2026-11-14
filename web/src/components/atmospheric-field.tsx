@@ -565,6 +565,7 @@ export function AtmosphericField() {
     let lastMapUpdate = startedAt;
     let lastMarkAt = startedAt - 60000;
     let waveCursor = 0;
+    let summonedTides = 0;
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
@@ -807,6 +808,18 @@ export function AtmosphericField() {
       if (!document.hidden) requestRender();
     };
 
+    const handleConsoleTide = () => {
+      const sequence = summonedTides + 1;
+      const point = {
+        x: 0.12 + hash(sequence * 29.17) * 0.76,
+        y: 0.16 + hash(sequence * 73.91) * 0.34,
+      };
+
+      summonedTides = sequence;
+      addWave(point);
+      requestRender();
+    };
+
     const resizeObserver = new ResizeObserver(() => {
       resize();
       requestRender();
@@ -817,6 +830,7 @@ export function AtmosphericField() {
     canvas.addEventListener('pointerup', releasePointer);
     canvas.addEventListener('pointercancel', releasePointer);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('luke:tide', handleConsoleTide);
     reduceMotion.addEventListener('change', requestRender);
     resizeObserver.observe(canvas);
     resize();
@@ -829,6 +843,7 @@ export function AtmosphericField() {
       canvas.removeEventListener('pointerup', releasePointer);
       canvas.removeEventListener('pointercancel', releasePointer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('luke:tide', handleConsoleTide);
       reduceMotion.removeEventListener('change', requestRender);
       resizeObserver.disconnect();
       gl.deleteBuffer(buffer);

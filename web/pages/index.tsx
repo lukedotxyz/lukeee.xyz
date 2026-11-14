@@ -1,6 +1,7 @@
 import Head from 'next/head';
 
 import { AtmosphericField } from '@/components/atmospheric-field';
+import { ConsoleNote } from '@/components/console-note';
 import { Soundscape } from '@/components/soundscape';
 
 export default function HomePage() {
@@ -15,6 +16,7 @@ export default function HomePage() {
       <main className="scene">
         <AtmosphericField />
         <Soundscape />
+        <ConsoleNote />
 
         <h1 className="sr-only">Luke Maloney</h1>
 
